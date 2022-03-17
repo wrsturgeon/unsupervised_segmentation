@@ -11,7 +11,7 @@ Transformer receiving input from an _n_ x _m_ "Thing" matrix of _n_ "things," ea
 ## Training
 
 Use _intra-input_ prediction instead of labels:
-1. Start with a random initialization of the _n_x_m_ "thing" matrix.
+1. Start with a random initialization of the _n_ x _m_ "thing" matrix.
 2. For each training step,
     1. Give the network coordinates as input.
     2. Verify network output against the actual value at that location (with a loss function of your choice).
