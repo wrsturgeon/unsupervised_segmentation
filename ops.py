@@ -29,11 +29,6 @@ def update_running_std(running: jnp.float16, std: jnp.ndarray) -> jnp.float16:
     step_multiplier = jnp.exp2(-jnp.log2(stop_gradient(running)) * jnp.log2(std)) # Larger if the update points toward 1
     return FRIC * running + (1 - FRIC) * std * step_multiplier
 
-# update_params = jit(lambda p, dLdp, lr: [
-#     [update_params(pi, dLdpi, lr) if isinstance(pi, list) else (pi - lr * dLdpi) / p[1] for pi, dLdpi in zip(p[0], dLdp[0])],
-#     p[1]
-# ])
-
 
 
 def fork_params(indent: int = 0) -> list:
@@ -69,11 +64,6 @@ def _fork(p: list, x: jnp.ndarray) -> jnp.ndarray:
     condition = x < intersection
     return jnp.where(condition, m1 * x + b1, m2 * x + b2)
 
-# print()
-# print("Variance check: fork")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(fork(fork_params(), randn(int(i * N), N))))
-
 
 
 def linear_params(n_in: int = N, n_out: int = N, indent: int = 0) -> list:
@@ -102,11 +92,6 @@ def _linear(p: jnp.ndarray, x: jnp.ndarray) -> jnp.ndarray:
     """ Simple matrix multiplication. """
     return p @ x
     # return (p + R_AMT * randn(*p.shape)) @ x
-
-# print()
-# print("Variance check: linear")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(linear(linear_params(int(i * N)), randn(int(i * N), N))))
 
 
 
@@ -143,11 +128,6 @@ def _feedforward(p: list, x: jnp.ndarray):
     """ Linear -> Fork -> Linear -> Fork """
     fork_a, fork_b, linear_a, linear_b = p
     return fork(fork_b, linear(linear_b, fork(fork_a, linear(linear_a, x))))
-
-# print()
-# print("Variance check: feedforward")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(feedforward(feedforward_params(int(i * N)), randn(int(i * N), N))))
 
 
 
@@ -195,11 +175,6 @@ def _mhsa(p: list, x: jnp.ndarray) -> jnp.ndarray:
     reconcat = (softmax(scores) @ v).reshape(n, -1)
     return linear(final_proj, reconcat)
 
-# print()
-# print("Variance check: mhsa")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(mhsa(mhsa_params(int(i * N)), randn(int(i * N), N))))
-
 
 
 def mhsa_res_params(n: int = N, h: int = 8, indent: int = 0) -> list:
@@ -226,11 +201,6 @@ def _mhsa_res(p: list, x: jnp.ndarray) -> jnp.ndarray:
     """ Multi-head attention, summed with the original input. """
     return jnp.sqrt(0.5) * (x + mhsa(p, x))
 
-# print()
-# print("Variance check: mhsa_res")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(mhsa_res(mhsa_res_params(int(i * N)), randn(int(i * N), N))))
-
 
 
 def feedforward_res_params(n: int = N, expand: int = 4, indent: int = 0) -> list:
@@ -256,11 +226,6 @@ def feedforward_res(p: list, x: jnp.ndarray) -> jnp.ndarray:
 def _feedforward_res(p: list, x: jnp.ndarray):
     """ Feedforward layer, summed with the original input. """
     return jnp.sqrt(0.5) * (x + feedforward(p, x))
-
-# print()
-# print("Variance check: feedforward_res")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(feedforward_res(feedforward_res_params(int(i * N)), randn(int(i * N), N))))
 
 
 
@@ -299,8 +264,3 @@ def _encoder_block(p: list, x: jnp.ndarray) -> jnp.ndarray:
     """ A single "block" in a Transformer encoder. """
     att_p, ffn_p = p
     return feedforward_res(ffn_p, mhsa_res(att_p, x))
-
-# print()
-# print("Variance check: encoder_block")
-# for i in jnp.exp2(jnp.arange(5) - 4):
-#     print(jnp.std(encoder_block(encoder_block_params(int(i * N)), randn(int(i * N), N))))
