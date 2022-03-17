@@ -6,7 +6,7 @@ To integrate recognition and segmentation in machine learning: to be able to pin
 
 ## Architecture
 
-Classic Transformer architecture on an _n_ x _m_ "Thing" matrix of _n_ "things," each with an _m_-dimensional vector encoding.
+Transformer receiving input from an _n_ x _m_ "Thing" matrix of _n_ "things," each with an _m_-dimensional vector encoding.
 
 ## Training
 
