@@ -2,7 +2,7 @@
 
 ## Goals
 
-To integrate recognition and segmentation in machine learning: to be able to point to and count "things" as part of recognition.
+To integrate recognition and segmentation in machine learning: to be able to pinpoint and count "things" as part of recognition, not as a separate process afterward.
 
 ## Architecture
 
