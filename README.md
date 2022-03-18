@@ -24,9 +24,9 @@ Note that, internally, coordinates are converted to a positional encoding, and _
 
 ### Positional Encoding
 
-In this model, positional encodings are 2 x _d_ x 2 tensors; for a positional encoding _P_, _P<sub>ijk</sub>_ (or, Python-flavored, _P_[_i_, _j_, _k_]) corresponds to
-- **_i_**: Relative to the whole size of the input if _i_=0 and relative to a defined sample rate (if none, one pixel/datapoint) otherwise;
-- **_j_**: Corresponding to a frequency 2<sup>_j_</sup> above the base rate;
+In this model, positional encodings are _d_ x 2 x 2 tensors; for a positional encoding _P_, _P<sub>ijk</sub>_ (or, Python-flavored, _P_[_i_, _j_, _k_]) corresponds to
+- **_i_**: Corresponding to a frequency 2<sup>_i_</sup> above the base rate;
+- **_j_**: Relative to the whole size of the input if _j_=0 and relative to a defined sample rate (if none, one pixel/datapoint) otherwise;
 - **_k_**: Cosine component if _k_=0, sine otherwise (i.e. real if _k_=0, imaginary otherwise).
 
 Positional similarity is calculated by—and here I wish GitHub enabled LaTeX—the following (ugh) steps:
