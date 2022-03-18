@@ -20,6 +20,7 @@ from scipy.stats import ortho_group
 
 R_AMT = 0.05
 N = 64
+D = 256
 FRIC = 0.99
 
 
@@ -35,7 +36,7 @@ def fork_params(indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], "Initializing fork ...", end=" ")
     start = time_ns()
     p = [jnp.asarray(randn(4), jnp.float16), None]
-    std = jnp.std(_fork(p[0], randn(N), False))
+    std = jnp.std(_fork(p[0], randn(D), False))
     p[1] = jnp.ones_like(std, jnp.float16)
     p = fork_normalize(p, std)
     print((time_ns() - start) / 1e9, "s")
@@ -67,11 +68,11 @@ def _fork(p: list, x: jnp.ndarray, stochastic: bool = False) -> jnp.ndarray:
 
 
 
-def linear_params(n_in: int = N, n_out: int = N, indent: int = 0) -> list:
+def linear_params(n_in: int = D, n_out: int = D, indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], f"Initializing linear ({n_in} -> {n_out}) ...", end=" ")
     start = time_ns()
     p = [jnp.asarray(ortho_group.rvs(max(n_out, n_in))[:n_out, :n_in], jnp.float16), None]
-    std = jnp.std(_linear(p[0], randn(n_in, N), False), 1)
+    std = jnp.std(_linear(p[0], randn(n_in, D), False), 1)
     p[1] = jnp.ones_like(std, jnp.float16)
     p = linear_normalize(p, std)
     print((time_ns() - start) / 1e9, "s")
@@ -95,7 +96,7 @@ def _linear(p: jnp.ndarray, x: jnp.ndarray, stochastic: bool = False) -> jnp.nda
 
 
 
-def feedforward_params(n: int = N, expand: int = 4, indent: int = 0) -> list:
+def feedforward_params(n: int = D, expand: int = 4, indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], f"Initializing feedforward ({n} -> {n * expand} -> {n}) ...")
     start = time_ns()
     p = [[
@@ -104,7 +105,7 @@ def feedforward_params(n: int = N, expand: int = 4, indent: int = 0) -> list:
         linear_params(n, expand * n, indent + 1),
         linear_params(expand * n, n, indent + 1),
     ], jnp.float16(1)]
-    p = feedforward_normalize(p, jnp.std(_feedforward(p[0], randn(n, N), False)))
+    p = feedforward_normalize(p, jnp.std(_feedforward(p[0], randn(n, D), False)))
     print(*['.' for _ in range(indent)], (time_ns() - start) / 1e9, "s")
     return p
 @jit
@@ -131,7 +132,7 @@ def _feedforward(p: list, x: jnp.ndarray, stochastic: bool = False) -> jnp.ndarr
 
 
 
-def mhsa_params(n: int = N, h: int = 8, indent: int = 0) -> list:
+def mhsa_params(n: int = D, h: int = 8, indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], f"Initializing mhsa ({n} -> {3 * n} -> {n}, {h} heads) ...")
     start = time_ns()
     p = [[
@@ -141,7 +142,7 @@ def mhsa_params(n: int = N, h: int = 8, indent: int = 0) -> list:
         [fork_params(indent + 1) for _ in range(h)],
         [fork_params(indent + 1) for _ in range(h)],
     ], jnp.float16(1)]
-    p = mhsa_normalize(p, jnp.std(_mhsa(p[0], randn(n, N), False)))
+    p = mhsa_normalize(p, jnp.std(_mhsa(p[0], randn(n, D), False)))
     print(*['.' for _ in range(indent)], (time_ns() - start) / 1e9, "s")
     return p
 @jit
@@ -177,11 +178,11 @@ def _mhsa(p: list, x: jnp.ndarray, stochastic: bool = False) -> jnp.ndarray:
 
 
 
-def mhsa_res_params(n: int = N, h: int = 8, indent: int = 0) -> list:
+def mhsa_res_params(n: int = D, h: int = 8, indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], "Initializing mhsa_res ...")
     start = time_ns()
     p = [mhsa_params(n, h, indent + 1), jnp.float16(1)]
-    p = mhsa_res_normalize(p, jnp.std(_mhsa_res(p[0], randn(n, N), False)))
+    p = mhsa_res_normalize(p, jnp.std(_mhsa_res(p[0], randn(n, D), False)))
     print(*['.' for _ in range(indent)], (time_ns() - start) / 1e9, "s")
     return p
 @jit
@@ -203,11 +204,11 @@ def _mhsa_res(p: list, x: jnp.ndarray, stochastic: bool = False) -> jnp.ndarray:
 
 
 
-def feedforward_res_params(n: int = N, expand: int = 4, indent: int = 0) -> list:
+def feedforward_res_params(n: int = D, expand: int = 4, indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], "Initializing feedforward_res ...")
     start = time_ns()
     p = [feedforward_params(n, expand, indent + 1), jnp.float16(1)]
-    p = feedforward_res_normalize(p, jnp.std(_feedforward_res(p[0], randn(n, N), False)))
+    p = feedforward_res_normalize(p, jnp.std(_feedforward_res(p[0], randn(n, D), False)))
     print(*['.' for _ in range(indent)], (time_ns() - start) / 1e9, "s")
     return p
 @jit
@@ -229,14 +230,14 @@ def _feedforward_res(p: list, x: jnp.ndarray, stochastic: bool = False) -> jnp.n
 
 
 
-def encoder_block_params(n: int = N, h: int = 8, expand: int = 4, indent: int = 0) -> list:
+def encoder_block_params(n: int = D, h: int = 8, expand: int = 4, indent: int = 0) -> list:
     print(*['.' for _ in range(indent)], f"Initializing encoder_block ({n}) ...")
     start = time_ns()
     p = [[
         mhsa_res_params(n, h, indent + 1),
         feedforward_res_params(n, expand, indent + 1),
     ], jnp.float16(1)]
-    p = encoder_block_normalize(p, jnp.std(_encoder_block(p[0], randn(n, N), False)))
+    p = encoder_block_normalize(p, jnp.std(_encoder_block(p[0], randn(n, D), False)))
     print(*['.' for _ in range(indent)], (time_ns() - start) / 1e9, "s")
     return p
 @jit

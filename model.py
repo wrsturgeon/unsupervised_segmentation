@@ -1,12 +1,21 @@
 from __future__ import annotations
 
-from jax.numpy import load, ndarray, savez
+from jax import jit, numpy as jnp
+from numpy.random import randn, random as rand_unit
 from os.path import join
+
+import ops
+import posenc
+
+
+
+D_POS = posenc.N_POS << 2
+assert ops.D > D_POS
 
 
 
 def load_parameters(name: str, unloaded: list) -> None:
-    def assign_rec(unassigned: list | ndarray, data: list, i: int) -> int:
+    def assign_rec(unassigned: list | jnp.ndarray, data: list, i: int) -> int:
         # dear god why couldn't we just use pointers ...
         for j, sub in enumerate(unassigned):
             if isinstance(sub, list):
@@ -15,33 +24,39 @@ def load_parameters(name: str, unloaded: list) -> None:
                 unassigned[j] = data[i] # To avoid the [string of expletives] hidden pass-by-value
                 i += 1
         return i
-    with load(join("parameters", f"{name}.npz")) as f:
+    with jnp.load(join("parameters", f"{name}.npz")) as f:
         assign_rec(unloaded, [f[s] for s in f.files], 0)
-
-
 
 def save_parameters(name: str, data: list) -> None:
     # Depth-first traversal
-    def flatten(x: list | ndarray) -> list:
-        if isinstance(x, ndarray):
+    def flatten(x: list | jnp.ndarray) -> list:
+        if isinstance(x, jnp.ndarray):
             return [x]
         if len(x) == 0:
             return []
         return [*flatten(x[0]), *flatten(x[1:])]
     f = flatten(data)
     # print([type(fi) for fi in f])
-    savez(join("parameters", f"{name}.npz"), *f)
+    jnp.savez(join("parameters", f"{name}.npz"), *f)
     
 
 
-# # Test
-# from ops import encoder_block_params
-# P = encoder_block_params()
-# save_parameters("test", P)
-# p = encoder_block_params()
-# load_parameters("test", p) # In place
-# def eq(A: list | ndarray, B: list | ndarray) -> bool:
-#     if isinstance(A, list):
-#         return isinstance(B, list) and all([eq(a, b) for a, b in zip(A, B)])
-#     return (not isinstance(B, list)) and (A == B).all()
-# print(eq(p, P))
+@jit
+def init_things() -> jnp.ndarray:
+    things = jnp.empty([ops.N, ops.D], jnp.float16)
+    p = posenc.encode(rand_unit(ops.N), 1).reshape(ops.N, -1)
+    print(p.shape)
+    things = things.at[:, :D_POS      ].set(p)
+    things = things.at[:,  D_POS      ].set(1 / (1 - rand_unit(ops.N)))
+    things = things.at[:, (D_POS + 1):].set(randn(ops.N, ops.D - D_POS - 1))
+    things = things.at[:, (D_POS + 1):].divide(jnp.std(things[:, (D_POS + 1):], 1, keepdims=True) + jnp.finfo(jnp.float16).smallest_normal)
+    return things
+
+print(init_things())
+
+
+
+# @jit
+def query_pixel(things: jnp.ndarray, idx: jnp.ndarray, size: int, srate: int = 1) -> jnp.ndarray:
+    p = posenc.encode(idx, size, srate)
+    return posenc.similarity(p, things[:D_POS], things[D_POS])
